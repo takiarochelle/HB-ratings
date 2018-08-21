@@ -2,11 +2,13 @@
 
 from sqlalchemy import func
 from model import User
-# from model import Rating
-# from model import Movie
+from datetime import datetime
+from model import Rating
+from model import Movie
 
 from model import connect_to_db, db
 from server import app
+
 
 
 def load_users():
@@ -16,6 +18,7 @@ def load_users():
 
     # Delete all rows in table, so if we need to run this a second time,
     # we won't be trying to add duplicate users
+    # user id | age | gender | occupation | zip code
     User.query.delete()
 
     # Read u.user file and insert data
@@ -23,8 +26,7 @@ def load_users():
         row = row.rstrip()
         user_id, age, gender, occupation, zipcode = row.split("|")
 
-        user = User(user_id=user_id,
-                    age=age,
+        user = User(age=age,
                     zipcode=zipcode)
 
         # We need to add to the session or it won't ever be stored
@@ -37,9 +39,46 @@ def load_users():
 def load_movies():
     """Load movies from u.item into database."""
 
+    #Read the u.items
+    for row in open("seed_data/u.item"):
+        row = row.rstrip()
+        movie_id, title, released_str, junk, imdb_url = row.split("|")[:5]
+
+        if released_str:
+            released_at = datetime.strptime(released_str, '%d-%b-%Y')
+        else:
+            released_at = None
+
+        title = title[:-7]
+
+        movie = Movie(title=title,
+                      released_at=released_at,
+                      imdb_url=imdb_url)
+
+        db.session.add(movie)
+
+    db.session.commit()
+
 
 def load_ratings():
-    """Load ratings from u.data into database."""
+    """Load ratings from u.data into database.
+    user_id | movie_id | score | timestamp."""
+
+    for row in open("seed_data/u.data"):
+        row = row.rstrip()
+        user_id, movie_id, score, timestamp = row.split('\t')
+        user_id = int(user_id)
+        movie_id = int(movie_id)
+        score = int(score)
+
+        rating = Rating(user_id=user_id,
+                        movie_id=movie_id,
+                        score=score)
+
+        db.session.add(rating)
+
+    db.session.commit()
+
 
 
 def set_val_user_id():
