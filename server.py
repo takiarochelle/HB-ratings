@@ -2,10 +2,10 @@
 
 from jinja2 import StrictUndefined
 
-from flask import Flask
+from flask import Flask, render_template, redirect, request, flash, session
 from flask_debugtoolbar import DebugToolbarExtension
 
-from model import connect_to_db, db
+from model import User, Rating, Movie, connect_to_db, db
 
 
 app = Flask(__name__)
@@ -17,12 +17,46 @@ app.secret_key = "ABC"
 # silently. This is horrible. Fix this so that, instead, it raises an
 # error.
 app.jinja_env.undefined = StrictUndefined
+app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 
 
 @app.route('/')
 def index():
     """Homepage."""
-    return "<html><body>Placeholder for the homepage.</body></html>"
+    return render_template('homepage.html')
+
+
+@app.route('/users')
+def user_list():
+    """Show list of users."""
+
+    users = User.query.all()
+    return render_template('user_list.html', users=users)
+
+
+@app.route('/register', methods=['GET'])
+def register_user():
+
+    return render_template('registration_form.html')
+
+
+@app.route('/register', methods=['POST'])
+def process_user():
+
+    email = request.args.get('email')
+    password = request.args.get('password')
+
+    users = User.query.all()
+    user_emails = [user.email for user in users]
+   
+    if email not in user_emails:
+        new_user = User(email=email, password=password)
+        db.session.add(new_user)
+    else:
+        flash('Email already taken')
+        return redirect('/')    
+
+    db.session.commit()
 
 
 if __name__ == "__main__":
