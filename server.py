@@ -34,29 +34,45 @@ def user_list():
     return render_template('user_list.html', users=users)
 
 
-@app.route('/register', methods=['GET'])
+@app.route('/register', methods=['GET','POST'])
 def register_user():
+    """Create new user and alert user if email is already taken"""
 
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        user = User.query.filter_by(email = email).first()
+       
+        if user:
+            flash('Email already taken')
+            return redirect('/register')
+        else:
+            new_user = User(email=email, password=password)
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Successfully added')
+            return redirect('/')
+    
     return render_template('registration_form.html')
 
 
-@app.route('/register', methods=['POST'])
-def process_user():
+@app.route('/login', methods=['GET', 'POST'])
+def login():
 
-    email = request.args.get('email')
-    password = request.args.get('password')
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        user = User.query.filter_by(email = email).first()
 
-    users = User.query.all()
-    user_emails = [user.email for user in users]
-   
-    if email not in user_emails:
-        new_user = User(email=email, password=password)
-        db.session.add(new_user)
-    else:
-        flash('Email already taken')
-        return redirect('/')    
+        if user.password == password:
+            session['user'] = user.user_id
+            flash('Login Successful!')
+            return redirect('/')
+        else:
+            flash('Wrong Password!!!')
 
-    db.session.commit()
+    return render_template('login.html')
 
 
 if __name__ == "__main__":
